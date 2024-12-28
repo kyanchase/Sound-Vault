@@ -1,16 +1,8 @@
-//
-//  ContentView.swift
-//  Sound Vault
-//
-//  Created by Kyan Chase on 12/20/24.
-//
-
 import SwiftUI
-import MusicKit
 
-struct ContentView: View {
+struct MainTabView: View {
     @StateObject private var appleMusicService = AppleMusicService()
-    @EnvironmentObject var vaultViewModel: VaultViewModel
+    @StateObject private var vaultViewModel = VaultViewModel()
     @State private var selectedTab = 0
     
     var body: some View {
@@ -29,7 +21,7 @@ struct ContentView: View {
             
             VaultView(viewModel: vaultViewModel)
                 .tabItem {
-                    Label("Vault", systemImage: "music.note.list")
+                    Label("Vault", systemImage: "archivebox.fill")
                 }
                 .tag(2)
             
@@ -47,5 +39,5 @@ struct ContentView: View {
 }
 
 #Preview {
-    ContentView()
+    MainTabView()
 }
