@@ -4,21 +4,21 @@ import MusicKit
 struct HomeView: View {
     @ObservedObject var viewModel: VaultViewModel
     @State private var showingSongPicker = false
-    
+
     var body: some View {
         NavigationView {
             ScrollView {
                 VStack(spacing: 20) {
                     // Song of the Day Section
                     SongOfTheDayCard(viewModel: viewModel, showingSongPicker: $showingSongPicker)
-                    
+
                     // Following Feed
                     VStack(alignment: .leading) {
                         Text("Following Feed")
                             .font(.title2)
                             .bold()
                             .padding(.horizontal)
-                        
+
                         ForEach(0..<5) { _ in
                             FeedItemCard()
                         }
