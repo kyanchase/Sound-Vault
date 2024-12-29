@@ -1,27 +1,39 @@
 import SwiftUI
 
-struct CommentsView: View {
+struct BotCommentsView: View {
     @Environment(\.dismiss) private var dismiss
-    @Binding var song: UserSong?
+    @ObservedObject var viewModel: VaultViewModel
     @State private var newComment = ""
     
     var body: some View {
         NavigationView {
             VStack {
-                if let song = song {
+                if let song = viewModel.selectedSongForComments {
                     List {
                         Section(header: Text("Song Info")) {
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(song.title)
+                                Text(song.songTitle)
                                     .font(.headline)
-                                Text(song.artist)
+                                Text(song.artistName)
                                     .foregroundColor(.secondary)
                             }
                         }
                         
                         Section(header: Text("Comments")) {
-                            Text("Comments coming soon...")
-                                .foregroundColor(.secondary)
+                            ForEach(viewModel.currentComments) { comment in
+                                VStack(alignment: .leading, spacing: 4) {
+                                    HStack {
+                                        Text(comment.userName)
+                                            .font(.headline)
+                                        Spacer()
+                                        Text(comment.timestamp, style: .relative)
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                    Text(comment.text)
+                                }
+                                .padding(.vertical, 4)
+                            }
                         }
                     }
                 }
@@ -55,7 +67,7 @@ struct CommentsView: View {
     
     private func submitComment() {
         guard !newComment.isEmpty else { return }
-        // TODO: Implement comment functionality for user songs
+        viewModel.addComment(newComment)
         newComment = ""
     }
-}
+} 

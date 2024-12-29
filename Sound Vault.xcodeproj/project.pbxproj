@@ -29,9 +29,22 @@
 		35F386042D167F09000DF4EA /* Sound VaultUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Sound VaultUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		35C0FCF02D21AFEC00522D72 /* Exceptions for "Sound Vault" folder in "Sound Vault" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+			);
+			target = 35F385E92D167F07000DF4EA /* Sound Vault */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
+
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		35F385EC2D167F07000DF4EA /* Sound Vault */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				35C0FCF02D21AFEC00522D72 /* Exceptions for "Sound Vault" folder in "Sound Vault" target */,
+			);
 			path = "Sound Vault";
 			sourceTree = "<group>";
 		};
@@ -398,14 +411,15 @@
 				DEVELOPMENT_ASSET_PATHS = "\"Sound Vault/Preview Content\"";
 				DEVELOPMENT_TEAM = DUFN7BV3MP;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Sound Vault needs access to Apple Music to help you discover and save your favorite albums.";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Sound Vault/Info.plist";
+				INFOPLIST_KEY_NSSpotifyUsageDescription = "Sound Vault needs access to Spotify to help you discover and save your favorite albums.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -429,14 +443,15 @@
 				DEVELOPMENT_ASSET_PATHS = "\"Sound Vault/Preview Content\"";
 				DEVELOPMENT_TEAM = DUFN7BV3MP;
 				ENABLE_PREVIEWS = YES;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_KEY_NSAppleMusicUsageDescription = "Sound Vault needs access to Apple Music to help you discover and save your favorite albums.";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Sound Vault/Info.plist";
+				INFOPLIST_KEY_NSSpotifyUsageDescription = "Sound Vault needs access to Spotify to help you discover and save your favorite albums.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				IPHONEOS_DEPLOYMENT_TARGET = 15.6;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.6;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -457,9 +472,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DUFN7BV3MP;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Sound VaultTests/Info.plist";
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "KyanC.Sound-VaultTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -477,9 +491,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DUFN7BV3MP;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "";
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Sound VaultTests/Info.plist";
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "KyanC.Sound-VaultTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -496,8 +509,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DUFN7BV3MP;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Sound VaultUITests/Info.plist";
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "KyanC.Sound-VaultUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -514,8 +527,8 @@
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = DUFN7BV3MP;
-				GENERATE_INFOPLIST_FILE = YES;
-				INFOPLIST_FILE = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = "Sound VaultUITests/Info.plist";
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "KyanC.Sound-VaultUITests";
 				PRODUCT_NAME = "$(TARGET_NAME)";

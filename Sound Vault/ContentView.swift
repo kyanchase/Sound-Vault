@@ -6,10 +6,9 @@
 //
 
 import SwiftUI
-import MusicKit
 
 struct ContentView: View {
-    @StateObject private var appleMusicService = AppleMusicService()
+    @StateObject private var spotifyService = SpotifyService()
     @EnvironmentObject var vaultViewModel: VaultViewModel
     @State private var selectedTab = 0
     
@@ -21,7 +20,7 @@ struct ContentView: View {
                 }
                 .tag(0)
             
-            ExploreView(appleMusicService: appleMusicService, vaultViewModel: vaultViewModel)
+            ExploreView(spotifyService: spotifyService, vaultViewModel: vaultViewModel)
                 .tabItem {
                     Label("Explore", systemImage: "magnifyingglass")
                 }
@@ -41,7 +40,7 @@ struct ContentView: View {
         }
         .tint(.purple)
         .task {
-            await appleMusicService.requestAuthorization()
+            await spotifyService.requestAuthorization()
         }
     }
 }

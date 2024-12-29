@@ -79,8 +79,7 @@ struct StatsView: View {
             
             HStack {
                 StatCard(title: "Songs", value: "\(viewModel.totalSongs)")
-                StatCard(title: "Lists", value: "\(viewModel.lists.count)")
-                StatCard(title: "Following", value: "0")
+                StatCard(title: "Following", value: "\(viewModel.followedUsers.count)")
             }
             .padding(.horizontal)
         }
@@ -149,13 +148,27 @@ struct RecentActivityView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 15) {
-            Text("Recent Activity")
-                .font(.title2)
-                .bold()
-                .padding(.horizontal)
+            HStack {
+                Text("Recent Activity")
+                    .font(.title2)
+                    .bold()
+                
+                Spacer()
+                
+                Text("\(viewModel.recentActivity.count) items")
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+            }
+            .padding(.horizontal)
             
-            ForEach(viewModel.recentActivity) { activity in
-                ActivityRow(activity: activity)
+            if viewModel.recentActivity.isEmpty {
+                Text("No recent activity")
+                    .foregroundColor(.secondary)
+                    .padding()
+            } else {
+                ForEach(viewModel.recentActivity) { activity in
+                    ActivityRow(activity: activity)
+                }
             }
         }
     }
@@ -165,32 +178,61 @@ struct ActivityRow: View {
     let activity: UserActivity
     
     var body: some View {
-        HStack {
-            AsyncImage(url: activity.artworkURL) { image in
-                image.resizable()
-                    .aspectRatio(contentMode: .fill)
-            } placeholder: {
-                Color.gray
+        HStack(spacing: 15) {
+            if let artworkURL = activity.artworkURL {
+                AsyncImage(url: artworkURL) { image in
+                    image.resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Color.gray
+                }
+                .frame(width: 50, height: 50)
+                .cornerRadius(10)
+            } else {
+                Image(systemName: "music.note")
+                    .font(.title2)
+                    .foregroundColor(.white)
+                    .frame(width: 50, height: 50)
+                    .background(Color.purple.opacity(0.8))
+                    .cornerRadius(10)
             }
-            .frame(width: 40, height: 40)
-            .cornerRadius(6)
             
-            VStack(alignment: .leading) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(activity.description)
                     .font(.subheadline)
+                    .fontWeight(.medium)
+                    .foregroundColor(.primary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.leading)
+                
                 Text(activity.timestamp, style: .relative)
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
             
             Spacer()
+            
+            Image(systemName: "chevron.right")
+                .foregroundColor(.gray)
+                .font(.system(size: 14, weight: .semibold))
         }
+        .padding()
+        .background(Color(.systemBackground))
+        .cornerRadius(15)
+        .shadow(color: Color.black.opacity(0.1), radius: 5, x: 0, y: 2)
         .padding(.horizontal)
     }
 }
 
+#if DEBUG
 struct ProfileView_Previews: PreviewProvider {
     static var previews: some View {
-        ProfileView(viewModel: VaultViewModel())
+        let userService = UserService()
+        let placeholder = VaultViewModel(userService: userService, spotifyService: SpotifyService())
+        ProfileView(viewModel: placeholder)
+            .task {
+                await placeholder.loadData()
+            }
     }
 }
+#endif

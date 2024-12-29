@@ -1,5 +1,4 @@
 import SwiftUI
-import MusicKit
 
 struct HomeView: View {
     @ObservedObject var viewModel: VaultViewModel
@@ -12,15 +11,20 @@ struct HomeView: View {
                     // Song of the Day Section
                     SongOfTheDayCard(viewModel: viewModel, showingSongPicker: $showingSongPicker)
 
-                    // Following Feed
-                    VStack(alignment: .leading) {
-                        Text("Following Feed")
-                            .font(.title2)
-                            .bold()
-                            .padding(.horizontal)
+                    // Bot's Song of the Day
+                    BotSongOfTheDayCard(viewModel: viewModel)
 
-                        ForEach(0..<5) { _ in
-                            FeedItemCard()
+                    // Following Feed
+                    if !viewModel.followedUsers.isEmpty {
+                        VStack(alignment: .leading) {
+                            Text("Following Feed")
+                                .font(.title2)
+                                .bold()
+                                .padding(.horizontal)
+
+                            ForEach(viewModel.followingFeed) { feedItem in
+                                FeedItemCard(feedItem: feedItem)
+                            }
                         }
                     }
                 }
@@ -45,7 +49,6 @@ struct SongOfTheDayCard: View {
     @ObservedObject var viewModel: VaultViewModel
     @Binding var showingSongPicker: Bool
     @State private var showComments = false
-    @State private var comment = ""
     
     var body: some View {
         VStack(spacing: 15) {
@@ -73,16 +76,16 @@ struct SongOfTheDayCard: View {
                     // Social interaction buttons
                     HStack(spacing: 30) {
                         Button(action: { viewModel.toggleLike(song: userSongOfDay) }) {
-                            Image(systemName: userSongOfDay.isLiked ? "heart.fill" : "heart")
-                                .foregroundColor(userSongOfDay.isLiked ? .red : .primary)
+                            HStack {
+                                Image(systemName: userSongOfDay.isLiked ? "heart.fill" : "heart")
+                                    .foregroundColor(userSongOfDay.isLiked ? .red : .primary)
+                                Text("\(userSongOfDay.likeCount)")
+                                    .foregroundColor(.secondary)
+                            }
                         }
                         
                         Button(action: { showComments.toggle() }) {
                             Image(systemName: "bubble.right")
-                        }
-                        
-                        Button(action: { viewModel.shareSong(song: userSongOfDay) }) {
-                            Image(systemName: "square.and.arrow.up")
                         }
                     }
                     .font(.title2)
@@ -108,21 +111,19 @@ struct SongOfTheDayCard: View {
             }
         }
         .padding(.horizontal)
-        //.sheet(isPresented: $showComments) {
-            //CommentsView(song: $viewModel.userSongOfDay)
+        .sheet(isPresented: $showComments) {
+            CommentsView(song: $viewModel.userSongOfDay)
         }
     }
-
-
-
+}
 
 struct SongRow: View {
-    let song: MusicKit.Song
+    let song: Song
     
     var body: some View {
         HStack {
-            if let artwork = song.artwork {
-                AsyncImage(url: artwork.url(width: 60, height: 60)) { image in
+            if let artworkURL = song.artworkURL {
+                AsyncImage(url: artworkURL) { image in
                     image
                         .resizable()
                         .aspectRatio(contentMode: .fill)
@@ -136,7 +137,7 @@ struct SongRow: View {
             VStack(alignment: .leading) {
                 Text(song.title)
                     .font(.headline)
-                Text(song.artistName)
+                Text(song.artist)
                     .font(.subheadline)
                     .foregroundColor(.gray)
             }
@@ -145,18 +146,59 @@ struct SongRow: View {
     }
 }
 
+struct BotSongOfTheDayCard: View {
+    @ObservedObject var viewModel: VaultViewModel
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Songs of the Day")
+                .font(.title2)
+                .bold()
+                .padding(.horizontal)
+            
+            if let botSong = viewModel.botSongOfDay {
+                FeedItemCard(feedItem: botSong)
+            } else {
+                VStack(spacing: 10) {
+                    ProgressView()
+                        .padding()
+                    Text("Loading recommendation...")
+                        .foregroundColor(.secondary)
+                }
+                .frame(maxWidth: .infinity)
+                .padding()
+                .background(Color(.systemBackground))
+                .cornerRadius(15)
+                .shadow(radius: 2)
+                .padding(.horizontal)
+            }
+        }
+        .sheet(isPresented: $viewModel.showingComments) {
+            BotCommentsView(viewModel: viewModel)
+        }
+    }
+}
+
 struct FeedItemCard: View {
+    @ObservedObject var feedItem: FeedItem
+    
     var body: some View {
         VStack(alignment: .leading) {
             HStack {
-                Circle()
-                    .fill(Color.gray)
-                    .frame(width: 40, height: 40)
+                AsyncImage(url: feedItem.userAvatarURL) { image in
+                    image.resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    Circle()
+                        .fill(Color.gray)
+                }
+                .frame(width: 40, height: 40)
+                .clipShape(Circle())
                 
                 VStack(alignment: .leading) {
-                    Text("Username")
+                    Text(feedItem.username)
                         .font(.headline)
-                    Text("2 hours ago")
+                    Text(feedItem.timestamp)
                         .font(.caption)
                         .foregroundColor(.gray)
                 }
@@ -164,14 +206,20 @@ struct FeedItemCard: View {
             
             // Album/Song Preview
             HStack {
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(Color.gray)
-                    .frame(width: 60, height: 60)
+                AsyncImage(url: feedItem.songArtworkURL) { image in
+                    image.resizable()
+                        .aspectRatio(contentMode: .fill)
+                } placeholder: {
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.gray)
+                }
+                .frame(width: 60, height: 60)
+                .cornerRadius(8)
                 
                 VStack(alignment: .leading) {
-                    Text("Song Title")
+                    Text(feedItem.songTitle)
                         .font(.headline)
-                    Text("Artist Name")
+                    Text(feedItem.artistName)
                         .foregroundColor(.gray)
                 }
             }
@@ -179,26 +227,32 @@ struct FeedItemCard: View {
             
             // Interaction Buttons
             HStack {
-                Button(action: {}) {
-                    Label("Like", systemImage: "heart")
+                Button(action: { feedItem.onLike() }) {
+                    HStack {
+                        Label("Like", systemImage: feedItem.isLiked ? "heart.fill" : "heart")
+                            .foregroundColor(feedItem.isLiked ? .red : .purple)
+                        Text("\(feedItem.likeCount)")
+                            .foregroundColor(.secondary)
+                    }
                 }
                 
                 Spacer()
                 
-                Button(action: {}) {
+                Button(action: { feedItem.onComment() }) {
                     Label("Comment", systemImage: "message")
                 }
                 
-                Spacer()
-                
-                Button(action: {}) {
-                    Label("Share", systemImage: "square.and.arrow.up")
+                if let onShare = feedItem.onShare {
+                    Spacer()
+                    Button(action: onShare) {
+                        Label("Share", systemImage: "square.and.arrow.up")
+                    }
                 }
             }
             .foregroundColor(.purple)
         }
         .padding()
-        .background(Color.white)
+        .background(Color(.systemBackground))
         .cornerRadius(15)
         .shadow(radius: 2)
         .padding(.horizontal)

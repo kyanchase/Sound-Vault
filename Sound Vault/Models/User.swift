@@ -1,20 +1,15 @@
 import Foundation
 
-struct User: Identifiable, Codable {
+struct User: Identifiable {
     let id: String
-    var username: String
-    var profileImage: String?
-    var bio: String?
-    var followers: [String] // User IDs
-    var following: [String] // User IDs
-    var songOfTheDay: SongOfTheDay?
-    var albumLists: [AlbumList]
-    var likedAlbums: [String] // Album IDs
+    let username: String
+    let avatarURL: URL?
+    let bio: String?
+    let email: String
+    var isFollowing: Bool
     
-    struct SongOfTheDay: Codable {
-        let songId: String
-        let date: Date
-        let comment: String?
-        let likes: Int
-    }
+    // Additional user properties
+    var followersCount: Int
+    var followingCount: Int
+    var vaultCount: Int
 }

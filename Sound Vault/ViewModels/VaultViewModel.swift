@@ -1,6 +1,5 @@
 import Foundation
 import SwiftUI
-import MusicKit
 
 @MainActor
 class VaultViewModel: ObservableObject {
@@ -9,117 +8,244 @@ class VaultViewModel: ObservableObject {
     @Published var canSetNewSong = false
     @Published var errorMessage: String?
     @Published var songOfDay: UserSong?
-    @Published var lists: [MusicList] = []
     @Published var wishlist: [WishlistItem] = []
     @Published var recentActivity: [UserActivity] = []
     @Published var totalSongs: Int = 0
     @Published var userSongOfDay: UserSong?
+    @Published var followedUsers: [User] = []
+    @Published var followingFeed: [FeedItem] = []
+    @Published var botSongOfDay: FeedItem?
+    @Published var currentComments: [SongComment] = []
+    @Published var showingComments = false
+    @Published var selectedSongForComments: FeedItem?
+    @Published var recentRatings: [UserAlbum] = []
+    @Published var userVault: [UserAlbum] = []
+    private let recentRatingsKey = "recentRatings"
+    private let savedVaultKey = "savedVault"
     
-    private let userService: UserService
-    private let musicService: AppleMusicService
-    let appleMusicService = AppleMusicService()
+    let userService: UserService
+    let spotifyService: SpotifyService
+    private let defaults = UserDefaults.standard
+    private let botSongKey = "botSongOfDay"
+    private let botSongDateKey = "botSongDate"
+    private let commentsKey = "songComments"
     
-    init() {
-        self.userService = UserService()
-        self.musicService = AppleMusicService()
-        loadData()
+    private struct SavedBotSong: Codable {
+        let id: String
+        let username: String
+        let userAvatarURL: String?
+        let songTitle: String
+        let artistName: String
+        let songArtworkURL: String?
+        let timestamp: String
+        var isLiked: Bool
+        var likeCount: Int
+        var comments: [SavedComment]
+        
+        struct SavedComment: Codable {
+            let id: String
+            let text: String
+            let userName: String
+            let timestamp: Date
+            
+            func toComment() -> SongComment {
+                SongComment(id: id, text: text, userName: userName, timestamp: timestamp)
+            }
+            
+            static func from(_ comment: SongComment) -> SavedComment {
+                SavedComment(id: comment.id, text: comment.text, userName: comment.userName, timestamp: comment.timestamp)
+            }
+        }
     }
     
-    init(userService: UserService, musicService: AppleMusicService) {
+    init(userService: UserService, spotifyService: SpotifyService) {
         self.userService = userService
-        self.musicService = musicService
-        loadData()
+        self.spotifyService = spotifyService
     }
     
-    private func loadData() {
-        savedAlbums = userService.savedAlbums
-        songOfTheDay = userService.songOfTheDay
-        canSetNewSong = userService.canSetNewSongOfTheDay()
-    }
-    
-    func saveAlbum(_ album: Album) {
-        userService.saveAlbum(album)
-        loadData()
-    }
-    
-    func removeAlbum(_ album: Album) {
-        userService.removeAlbum(album)
-        loadData()
-    }
-    
-    func isAlbumSaved(_ album: Album) -> Bool {
-        return userService.isAlbumSaved(album)
-    }
-    
-    func setSongOfTheDay(song: MusicKit.Song) async {
-        guard userService.canSetNewSongOfTheDay() else {
-            errorMessage = "You can only set one Song of the Day per day"
-            return
+    func loadData() async {
+        // Load vault
+        if let data = defaults.data(forKey: savedVaultKey),
+           let decoded = try? JSONDecoder().decode([UserAlbum].self, from: data) {
+            userVault = decoded
         }
         
-        let newSongOfTheDay = SongOfTheDay(
-            songId: song.id.rawValue,
-            title: song.title,
-            artist: song.artistName,
-            artworkURL: song.artwork?.url(width: 300, height: 300)?.absoluteString ?? "",
-            date: Date(),
-            comment: nil,
-            likes: 0
+        // Load recent ratings
+        if let data = defaults.data(forKey: recentRatingsKey),
+           let decoded = try? JSONDecoder().decode([UserAlbum].self, from: data) {
+            recentRatings = decoded
+        }
+        
+        // Load followed users
+        followedUsers = (try? await userService.getFollowedUsers()) ?? []
+        
+        // Load feed
+        followingFeed = await loadFollowingFeed()
+        
+        // Load bot's song of the day
+        botSongOfDay = await loadBotSongOfDay()
+    }
+    
+    private func loadFollowingFeed() async -> [FeedItem] {
+        // TODO: Implement actual feed loading
+        return []
+    }
+    
+    private func shouldUpdateBotSong() -> Bool {
+        if let lastDate = defaults.object(forKey: botSongDateKey) as? Date {
+            return !Calendar.current.isDate(lastDate, inSameDayAs: Date())
+        }
+        return true
+    }
+    
+    private func saveBotSong(_ feedItem: FeedItem) {
+        let savedSong = SavedBotSong(
+            id: feedItem.id,
+            username: feedItem.username,
+            userAvatarURL: feedItem.userAvatarURL?.absoluteString,
+            songTitle: feedItem.songTitle,
+            artistName: feedItem.artistName,
+            songArtworkURL: feedItem.songArtworkURL?.absoluteString,
+            timestamp: feedItem.timestamp,
+            isLiked: feedItem.isLiked,
+            likeCount: feedItem.likeCount,
+            comments: currentComments.map { SavedBotSong.SavedComment.from($0) }
         )
         
-        userService.setSongOfTheDay(newSongOfTheDay)
-        songOfTheDay = newSongOfTheDay
-        canSetNewSong = false
+        if let encoded = try? JSONEncoder().encode(savedSong) {
+            defaults.set(encoded, forKey: botSongKey)
+            defaults.set(Date(), forKey: botSongDateKey)
+            self.objectWillChange.send()
+        }
     }
     
-    // MARK: - Song of Day Methods
-    func setSongOfDay(_ song: UserSong) {
-        songOfDay = song
-        addActivity("Set \(song.title) as Song of the Day", artworkURL: song.artworkURL)
-    }
-    
-    func toggleLike(song: UserSong) {
-        if let index = lists.flatMap({ $0.items }).firstIndex(where: { $0.id == song.id }) {
-            // Toggle like status
-            var updatedSong = song
-            updatedSong.isLiked.toggle()
-            // Update in lists
-            for (listIndex, list) in lists.enumerated() {
-                if let songIndex = list.items.firstIndex(where: { $0.id == song.id }) {
-                    lists[listIndex].items[songIndex] = updatedSong
+    private func loadSavedBotSong() -> FeedItem? {
+        guard let data = defaults.data(forKey: botSongKey),
+              let savedSong = try? JSONDecoder().decode(SavedBotSong.self, from: data) else {
+            return nil
+        }
+        
+        // Load comments
+        self.currentComments = savedSong.comments.map { $0.toComment() }
+        
+        let feedItem = FeedItem(
+            id: savedSong.id,
+            username: savedSong.username,
+            userAvatarURL: savedSong.userAvatarURL.flatMap(URL.init),
+            songTitle: savedSong.songTitle,
+            artistName: savedSong.artistName,
+            songArtworkURL: savedSong.songArtworkURL.flatMap(URL.init),
+            timestamp: savedSong.timestamp,
+            isLiked: savedSong.isLiked,
+            likeCount: savedSong.likeCount,
+            onLike: { [weak self] in
+                if let self = self {
+                    self.botSongOfDay?.isLiked.toggle()
+                    self.botSongOfDay?.likeCount += self.botSongOfDay?.isLiked == true ? 1 : -1
+                    if let updatedSong = self.botSongOfDay {
+                        self.saveBotSong(updatedSong)
+                    }
+                }
+            },
+            onComment: { [weak self] in
+                if let self = self {
+                    self.selectedSongForComments = self.botSongOfDay
+                    self.showingComments = true
                 }
             }
-            addActivity(updatedSong.isLiked ? "Liked \(song.title)" : "Unliked \(song.title)", artworkURL: song.artworkURL)
+        )
+        return feedItem
+    }
+    
+    private func loadBotSongOfDay() async -> FeedItem? {
+        // Check if we should use cached song
+        if !shouldUpdateBotSong() {
+            if let savedSong = loadSavedBotSong() {
+                return savedSong
+            }
+        }
+        
+        // Get new song if needed
+        do {
+            // Try up to 3 times to get a recommendation
+            for attempt in 0..<3 {
+                do {
+                    let recommendations = try await spotifyService.getRecommendedSongs(limit: 1)
+                    guard let recommendedSong = recommendations.first else {
+                        print("No recommendations returned on attempt \(attempt + 1)")
+                        if attempt < 2 {
+                            try await Task.sleep(nanoseconds: 1_000_000_000)
+                        }
+                        continue
+                    }
+                    
+                    let feedItem = FeedItem(
+                        id: UUID().uuidString,
+                        username: "Sound Vault Bot 🤖",
+                        userAvatarURL: URL(string: "https://ui-avatars.com/api/?name=Bot&background=random"),
+                        songTitle: recommendedSong.title,
+                        artistName: recommendedSong.artist,
+                        songArtworkURL: recommendedSong.artworkURL,
+                        timestamp: "Today",
+                        isLiked: false,
+                        likeCount: 0,
+                        onLike: { [weak self] in
+                            if let self = self {
+                                self.botSongOfDay?.isLiked.toggle()
+                                self.botSongOfDay?.likeCount += self.botSongOfDay?.isLiked == true ? 1 : -1
+                                if let updatedSong = self.botSongOfDay {
+                                    self.saveBotSong(updatedSong)
+                                }
+                            }
+                        },
+                        onComment: { [weak self] in
+                            if let self = self {
+                                self.selectedSongForComments = self.botSongOfDay
+                                self.showingComments = true
+                            }
+                        }
+                    )
+                    
+                    // Save the new song
+                    saveBotSong(feedItem)
+                    return feedItem
+                } catch {
+                    print("Attempt \(attempt + 1) to load bot's song failed: \(error)")
+                    if attempt < 2 {
+                        try await Task.sleep(nanoseconds: 1_000_000_000)
+                    }
+                }
+            }
+            
+            print("Failed to load bot's song after 3 attempts")
+            return nil
+        } catch {
+            print("Error loading bot's song: \(error)")
+            return nil
         }
     }
     
-    // MARK: - List Methods
-    func createList(name: String) {
-        let newList = MusicList(name: name)
-        lists.append(newList)
-        addActivity("Created new list: \(name)", artworkURL: nil)
+    func addToWishlist(album: UserAlbum) {
+        let wishlistItem = WishlistItem(
+            id: UUID().uuidString,
+            title: album.title,
+            artist: album.artist,
+            artworkURL: album.artworkURL
+        )
+        wishlist.append(wishlistItem)
     }
     
-    func addToList(song: UserSong, list: MusicList) {
-        guard let listIndex = lists.firstIndex(where: { $0.id == list.id }) else { return }
-        if !lists[listIndex].items.contains(where: { $0.id == song.id }) {
-            lists[listIndex].items.append(song)
-            addActivity("Added \(song.title) to \(list.name)", artworkURL: song.artworkURL)
-        }
+    func setAlbumOfDay(_ album: UserAlbum) {
+        // TODO: Implement setting album of the day
     }
     
-    // MARK: - Wishlist Methods
-    func addToWishlist(song: UserSong) {
-        let wishlistItem = WishlistItem(title: song.title, artist: song.artist, artworkURL: song.artworkURL)
-        if !wishlist.contains(where: { $0.id == wishlistItem.id }) {
-            wishlist.append(wishlistItem)
-            addActivity("Added \(song.title) to wishlist", artworkURL: song.artworkURL)
-        }
-    }
-    
-    // MARK: - Activity Methods
-    private func addActivity(_ description: String, artworkURL: URL?) {
-        let activity = UserActivity(description: description, artworkURL: artworkURL)
+    private func addActivity(_ description: String) {
+        let activity = UserActivity(
+            id: UUID().uuidString,
+            description: description,
+            timestamp: Date(),
+            artworkURL: nil
+        )
         recentActivity.insert(activity, at: 0)
         
         // Keep only last 50 activities
@@ -128,43 +254,87 @@ class VaultViewModel: ObservableObject {
         }
     }
     
-    // MARK: - Helper Methods
-    func shareSong(song: UserSong) {
-        // Implement sharing functionality
-        addActivity("Shared \(song.title)", artworkURL: song.artworkURL)
+    func toggleLike(song: UserSong) {
+        if let index = followingFeed.firstIndex(where: { $0.id == song.id }) {
+            followingFeed[index].isLiked.toggle()
+            followingFeed[index].likeCount += followingFeed[index].isLiked ? 1 : -1
+        }
+        
+        if userSongOfDay?.id == song.id {
+            userSongOfDay?.isLiked.toggle()
+            if let isLiked = userSongOfDay?.isLiked {
+                userSongOfDay?.likeCount += isLiked ? 1 : -1
+            }
+        }
     }
     
-    // MARK: - MusicKit Conversion
-    func convertToUserSong(_ musicKitSong: MusicKit.Song) -> UserSong {
-        UserSong(
-            title: musicKitSong.title,
-            artist: musicKitSong.artistName,
-            artworkURL: musicKitSong.artwork?.url(width: 300, height: 300),
-            isLiked: false
-        )
+    func shareSong(song: UserSong) {
+        // TODO: Implement sharing functionality
     }
     
     func setSongOfTheDay(song: Song) async {
-        do {
-            // Convert MusicKit Song to UserSong
-            let userSong = UserSong(
-                id: song.id.rawValue,
-                title: song.title,
-                artist: song.artistName,
-                artworkURL: song.artwork?.url(width: 300, height: 300),
-                comment: nil,
-                likes: 0,
-                date: Date(),
-                isLiked: false
+        // Convert Song to UserSong
+        let userSong = UserSong(
+            id: song.id,
+            title: song.title,
+            artist: song.artist,
+            artworkURL: song.artworkURL,
+            isLiked: false,
+            likeCount: 0,
+            comments: []
+        )
+        
+        await MainActor.run {
+            self.userSongOfDay = userSong
+            addActivity("Set \(song.title) by \(song.artist) as Song of the Day")
+        }
+    }
+    
+    func addComment(_ text: String) {
+        let comment = SongComment(text: text, userName: "You")
+        currentComments.append(comment)
+        if let song = botSongOfDay {
+            saveBotSong(song)
+        }
+    }
+    
+    func addToVaultWithRating(album: UserAlbum) {
+        // Add to vault
+        if !savedAlbums.contains(where: { $0.id == album.id }) {
+            let userAlbum = UserAlbum(
+                id: album.id,
+                title: album.title,
+                artist: album.artist,
+                artworkURL: album.artworkURL,
+                rating: album.rating,
+                dateAdded: Date()
             )
             
-            await MainActor.run {
-                self.userSongOfDay = userSong
+            // Add to vault
+            userVault.append(userAlbum)
+            
+            // Add to recent ratings
+            recentRatings.insert(userAlbum, at: 0)
+            if recentRatings.count > 3 {
+                recentRatings.removeLast()
             }
-        } catch {
-            await MainActor.run {
-                self.errorMessage = error.localizedDescription
+            
+            // Save vault and ratings
+            if let encoded = try? JSONEncoder().encode(userVault) {
+                defaults.set(encoded, forKey: savedVaultKey)
             }
+            if let encoded = try? JSONEncoder().encode(recentRatings) {
+                defaults.set(encoded, forKey: recentRatingsKey)
+            }
+            
+            addActivity("Rated \(album.title) by \(album.artist) \(album.rating) stars")
         }
+    }
+    
+    func getRatingForAlbum(id: String) -> Int? {
+        if let existingAlbum = userVault.first(where: { $0.id == id }) {
+            return existingAlbum.rating
+        }
+        return nil
     }
 }

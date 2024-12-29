@@ -2,8 +2,6 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-    <key>NSAppleMusicUsageDescription</key>
-    <string>Sound Vault needs access to Apple Music to help you discover and save your favorite albums.</string>
     <key>CFBundleDevelopmentRegion</key>
     <string>$(DEVELOPMENT_LANGUAGE)</string>
     <key>CFBundleExecutable</key>
@@ -26,6 +24,8 @@
     <dict>
         <key>UIApplicationSupportsMultipleScenes</key>
         <false/>
+        <key>UISceneConfigurations</key>
+        <dict/>
     </dict>
     <key>UILaunchScreen</key>
     <dict/>
@@ -43,4 +43,4 @@
         <string>UIInterfaceOrientationLandscapeRight</string>
     </array>
 </dict>
-</plist>
+</plist> 

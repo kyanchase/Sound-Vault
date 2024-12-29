@@ -4,14 +4,14 @@ struct VaultView: View {
     @ObservedObject var viewModel: VaultViewModel
     @State private var selectedSegment = 0
     @State private var showExplore = false
-    private let segments = ["Albums", "Lists", "Wishlist"]
+    private let segments = ["Albums", "Wishlist"]
     
     var body: some View {
         NavigationView {
             VStack {
                 // Custom Segmented Control
                 Picker("Category", selection: $selectedSegment) {
-                    ForEach(0..<3) { index in
+                    ForEach(0..<2) { index in
                         Text(segments[index]).tag(index)
                     }
                 }
@@ -23,11 +23,8 @@ struct VaultView: View {
                     AlbumsGridView(viewModel: viewModel)
                         .tag(0)
                     
-                    ListsView(viewModel: viewModel)
-                        .tag(1)
-                    
                     WishlistView(viewModel: viewModel)
-                        .tag(2)
+                        .tag(1)
                 }
                 .tabViewStyle(.page(indexDisplayMode: .never))
             }
@@ -40,7 +37,7 @@ struct VaultView: View {
                 }
             }
             .sheet(isPresented: $showExplore) {
-                ExploreView(appleMusicService: viewModel.appleMusicService, vaultViewModel: viewModel)
+                ExploreView(spotifyService: viewModel.spotifyService, vaultViewModel: viewModel)
             }
         }
     }
@@ -55,12 +52,12 @@ struct AlbumsGridView: View {
     
     var body: some View {
         ScrollView {
-            if viewModel.savedAlbums.isEmpty {
+            if viewModel.userVault.isEmpty {
                 EmptyVaultView()
             } else {
                 LazyVGrid(columns: columns, spacing: 20) {
-                    ForEach(viewModel.savedAlbums) { album in
-                        VaultAlbumCard(album: album, viewModel: viewModel)
+                    ForEach(viewModel.userVault) { album in
+                        VaultAlbumCard(album: album)
                     }
                 }
                 .padding()
@@ -70,8 +67,7 @@ struct AlbumsGridView: View {
 }
 
 struct VaultAlbumCard: View {
-    let album: Album
-    @ObservedObject var viewModel: VaultViewModel
+    let album: UserAlbum
     
     var body: some View {
         VStack(alignment: .leading) {
@@ -99,41 +95,14 @@ struct VaultAlbumCard: View {
                 .font(.subheadline)
                 .foregroundColor(.secondary)
                 .lineLimit(1)
-        }
-    }
-}
-
-struct ListsView: View {
-    @ObservedObject var viewModel: VaultViewModel
-    @State private var showCreateList = false
-    
-    var body: some View {
-        VStack {
-            if viewModel.lists.isEmpty {
-                VStack(spacing: 20) {
-                    Text("No Lists Yet")
-                        .font(.title2)
-                        .foregroundColor(.secondary)
-                    
-                    Button(action: { showCreateList = true }) {
-                        Label("Create List", systemImage: "plus.circle.fill")
-                            .font(.headline)
-                    }
-                    .buttonStyle(.borderedProminent)
-                }
-            } else {
-                ScrollView {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 20) {
-                        ForEach(viewModel.lists) { list in
-                            ListCard(list: list)
-                        }
-                    }
-                    .padding()
+            
+            HStack {
+                ForEach(0..<5) { index in
+                    Image(systemName: index < album.rating ? "star.fill" : "star")
+                        .foregroundColor(.yellow)
+                        .font(.system(size: 12))
                 }
             }
-        }
-        .sheet(isPresented: $showCreateList) {
-            CreateListView(viewModel: viewModel)
         }
     }
 }
@@ -153,46 +122,6 @@ struct EmptyVaultView: View {
                 .foregroundColor(.secondary)
         }
         .padding()
-    }
-}
-
-struct ListCard: View {
-    let list: MusicList
-    
-    var body: some View {
-        VStack(alignment: .leading) {
-            Group {
-                if list.items.isEmpty {
-                    RoundedRectangle(cornerRadius: 10)
-                        .fill(Color.gray.opacity(0.3))
-                } else {
-                    LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())], spacing: 2) {
-                        ForEach(list.items.prefix(4)) { item in
-                            if let url = item.artworkURL {
-                                AsyncImage(url: url) { image in
-                                    image.resizable()
-                                        .aspectRatio(contentMode: .fill)
-                                } placeholder: {
-                                    Color.gray.opacity(0.3)
-                                }
-                            } else {
-                                Color.gray.opacity(0.3)
-                            }
-                        }
-                    }
-                    .clipShape(RoundedRectangle(cornerRadius: 10))
-                }
-            }
-            .aspectRatio(1.0, contentMode: .fit)
-            
-            Text(list.name)
-                .font(.headline)
-                .lineLimit(1)
-            
-            Text("\(list.items.count) items")
-                .font(.subheadline)
-                .foregroundColor(.secondary)
-        }
     }
 }
 
@@ -226,7 +155,7 @@ struct WishlistView: View {
             }
         }
         .sheet(isPresented: $showExplore) {
-            ExploreView(appleMusicService: viewModel.appleMusicService, vaultViewModel: viewModel)
+            ExploreView(spotifyService: viewModel.spotifyService, vaultViewModel: viewModel)
         }
     }
 }
@@ -270,38 +199,5 @@ struct WishlistItemCard: View {
         .background(Color(.systemBackground))
         .cornerRadius(10)
         .shadow(radius: 2)
-    }
-}
-
-struct CreateListView: View {
-    @ObservedObject var viewModel: VaultViewModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var listName = ""
-    
-    var body: some View {
-        NavigationView {
-            Form {
-                Section {
-                    TextField("List Name", text: $listName)
-                }
-            }
-            .navigationTitle("Create List")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarLeading) {
-                    Button("Cancel") {
-                        dismiss()
-                    }
-                }
-                
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button("Create") {
-                        viewModel.createList(name: listName)
-                        dismiss()
-                    }
-                    .disabled(listName.isEmpty)
-                }
-            }
-        }
     }
 }
